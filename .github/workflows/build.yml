@@ -30,9 +30,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
+      - name: Fix Paper 26.2 API
         run: |
           sed -i 's/26\.2\.build\.112/26.2.build.129-stable/g' build.gradle.kts
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("src/main/java/com/snowmcp/wardenpet/SnowWardenPet.java")
+          s = p.read_text()
+
+          old = '        meta.displayName(org.bukkit.ChatColor.translateAlternateColorCodes(\'&\', getConfig().getString("pet.name", "&5&lWarden Pet")));'
+          new = '        meta.displayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(getConfig().getString("pet.name", "&5&lWarden Pet")));'
+
+          if old not in s:
+              raise SystemExit("Could not find the old displayName line.")
+
+          p.write_text(s.replace(old, new))
+          PY
+
+      - name: Build
+        run: |
           gradle build --no-daemon
 
       - name: Upload JAR
